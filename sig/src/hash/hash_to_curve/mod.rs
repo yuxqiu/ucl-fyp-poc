@@ -1,4 +1,4 @@
-mod cofactor;
+pub mod cofactor;
 
 use std::marker::PhantomData;
 
@@ -20,11 +20,13 @@ use cofactor::CofactorGadget;
 /// and then mapping it to the elliptic curve defined over that field.
 pub struct MapToCurveBasedHasherGadget<T, H2F, M2C, CF, FP>
 where
-    T: CurveGroup,
+    T: CurveGroup + CofactorGadget<FP, CF>,
     H2F: HashToFieldGadget<T::BaseField, CF, FP>,
     M2C: MapToCurveGadget<T, CF, FP>,
     CF: PrimeField,
     FP: FieldVar<T::BaseField, CF>,
+    for<'a> &'a FP: FieldOpsBounds<'a, <T as CurveGroup>::BaseField, FP>,
+    <T as CurveGroup>::Config: SWCurveConfig,
 {
     field_hasher: H2F,
     _phantom: PhantomData<(T, M2C, CF, FP)>,

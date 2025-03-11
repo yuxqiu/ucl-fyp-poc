@@ -1047,6 +1047,7 @@ dependencies = [
  "blake2",
  "criterion",
  "delegate",
+ "derivative",
  "rand",
  "roaring",
  "serde",

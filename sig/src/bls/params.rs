@@ -27,9 +27,13 @@ pub type G1 = Projective<<BLSSigCurveConfig as Bls12Config>::G1Config>;
 pub type G2 = Projective<<BLSSigCurveConfig as Bls12Config>::G2Config>;
 
 // which curve and config that hash to curve runs on
-pub type HashCurveGroup = G2;
-pub type HashCurveConfig = <HashCurveGroup as CurveGroup>::Config;
-pub type HashCurveVar<F, CF> = Fp2Var<<BLSSigCurveConfig as Bls12Config>::Fp2Config, F, CF>;
+// pub type HashCurveGroup = G2;
+// pub type HashCurveConfig = <HashCurveGroup as CurveGroup>::Config;
+//
+// Right now, this cannot be easily switched because we then need to define
+// carefully what PublicConfig, PublicKeyVar and SignatureVar is.
+pub type HashCurveConfig<P> = <P as Bls12Config>::G2Config;
+pub type HashCurveVar<P, F, CF> = Fp2Var<<P as Bls12Config>::Fp2Config, F, CF>;
 
 // curve generators
 pub const G1_GENERATOR: G1Affine = <<Config as Bls12Config>::G1Config as SWCurveConfig>::GENERATOR;

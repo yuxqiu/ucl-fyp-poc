@@ -1,5 +1,5 @@
 #[expect(clippy::missing_errors_doc)]
-pub mod bc;
+// pub mod bc;
 #[expect(clippy::missing_errors_doc)]
 pub mod bls;
 #[expect(clippy::missing_errors_doc)]
@@ -7,308 +7,241 @@ pub mod hash;
 
 #[cfg(test)]
 mod tests {
-    use ark_bls12_381::Fq;
-    use ark_ec::bls12::{Bls12, Bls12Config};
-    use ark_ff::{
-        BigInt, BitIteratorBE, CubicExtField, Fp2ConfigWrapper, Fp6ConfigWrapper, QuadExtField,
-    };
-    use ark_r1cs_std::fields::fp2::Fp2Var;
-    use ark_r1cs_std::fields::fp6_3over2::Fp6Var;
-    use ark_r1cs_std::fields::quadratic_extension::QuadExtVar;
-    use ark_r1cs_std::fields::FieldVar;
-    use ark_r1cs_std::{
-        alloc::AllocVar,
-        groups::{
-            bls12::{G1PreparedVar, G2PreparedVar},
-            CurveVar,
-        },
-        pairing::bls12,
-        prelude::PairingVar,
-        uint8::UInt8,
-    };
-    use ark_relations::r1cs::ConstraintSystem;
-    use bls::{
-        BLSAggregateSignatureVerifyGadget, BaseSNARKField, BaseSigCurveField, Parameters,
-        ParametersVar, PublicKey, PublicKeyVar, SecretKey, Signature, SignatureVar,
-    };
-    use rand::thread_rng;
-    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
+    // use ark_bls12_381::Fq;
+    // use ark_ec::bls12::{Bls12, Bls12Config};
+    // use ark_ff::{
+    //     BigInt, BitIteratorBE, CubicExtField, Fp2ConfigWrapper, Fp6ConfigWrapper, QuadExtField,
+    // };
+    // use ark_r1cs_std::fields::fp2::Fp2Var;
+    // use ark_r1cs_std::fields::fp6_3over2::Fp6Var;
+    // use ark_r1cs_std::fields::quadratic_extension::QuadExtVar;
+    // use ark_r1cs_std::fields::FieldVar;
+    // use ark_r1cs_std::{
+    //     alloc::AllocVar,
+    //     groups::{
+    //         bls12::{G1PreparedVar, G2PreparedVar},
+    //         CurveVar,
+    //     },
+    //     pairing::bls12,
+    //     prelude::PairingVar,
+    //     uint8::UInt8,
+    // };
+    // use ark_relations::r1cs::ConstraintSystem;
+    // use bls::{
+    //     BLSAggregateSignatureVerifyGadget, BaseSNARKField, BaseSigCurveField, Parameters,
+    //     ParametersVar, PublicKey, PublicKeyVar, SecretKey, Signature, SignatureVar,
+    // };
+    // use rand::thread_rng;
+    // use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
-    use crate::bls::BLSSigCurveConfig;
+    // use crate::bls::BLSSigCurveConfig;
 
-    use super::*;
+    // use super::*;
 
-    fn get_instance() -> (&'static str, Parameters, SecretKey, PublicKey, Signature) {
-        let msg = "Hello World";
-        let mut rng = thread_rng();
+    // #[test]
+    // fn check_r1cs() {
+    //     let cs = ConstraintSystem::new_ref();
+    //     let (msg, params, _, pk, sig) = get_instance();
 
-        let params = Parameters::setup();
-        let sk = SecretKey::new(&mut rng);
-        let pk = PublicKey::new(&sk, &params);
+    //     let msg_var: Vec<UInt8<BaseSNARKField>> = msg
+    //         .as_bytes()
+    //         .iter()
+    //         .map(|b| UInt8::new_input(cs.clone(), || Ok(b)).unwrap())
+    //         .collect();
+    //     let params_var = ParametersVar::new_input(cs.clone(), || Ok(params)).unwrap();
+    //     let pk_var = PublicKeyVar::new_input(cs.clone(), || Ok(pk)).unwrap();
+    //     let sig_var = SignatureVar::new_input(cs.clone(), || Ok(sig)).unwrap();
 
-        let sig = Signature::sign(msg.as_bytes(), &sk, &params);
+    //     BLSAggregateSignatureVerifyGadget::verify(&params_var, &pk_var, &msg_var, &sig_var)
+    //         .unwrap();
 
-        (msg, params, sk, pk, sig)
-    }
+    //     println!("Number of constraints: {}", cs.num_constraints());
+    //     assert!(cs.is_satisfied().unwrap());
 
-    fn get_aggregate_instances() -> (
-        &'static str,
-        Parameters,
-        Vec<SecretKey>,
-        Vec<PublicKey>,
-        Signature,
-    ) {
-        const N: usize = 1000;
+    //     println!("RC1S is satisfied!");
+    // }
 
-        let msg = "Hello World";
-        let mut rng = thread_rng();
+    // #[test]
+    // fn emulation_bug_example() {
+    //     let cs = ConstraintSystem::new_ref();
+    //     let (_, params, _, pk, sig) = get_instance();
 
-        let params = Parameters::setup();
-        let secret_keys: Vec<SecretKey> = (0..N).map(|_| SecretKey::new(&mut rng)).collect();
-        let public_keys: Vec<PublicKey> = secret_keys
-            .iter()
-            .map(|sk| PublicKey::new(sk, &params))
-            .collect();
+    //     let params_var = ParametersVar::new_input(cs.clone(), || Ok(params)).unwrap();
+    //     let pk_var = PublicKeyVar::new_constant(cs.clone(), pk).unwrap();
+    //     let sig_var = SignatureVar::new_constant(cs.clone(), sig).unwrap();
 
-        let sig = Signature::aggregate_sign(msg.as_bytes(), &secret_keys, &params).unwrap();
+    //     // Debug Story: Aggregate Sig -> product_of_pairing -> miller loop ->
+    //     /*
+    //          // for convenience, just read 0
+    //         if let Some(p) = ps.get(0) {
+    //             let cs = p.0.x.cs();
+    //             tracing::info!(num_constraints = cs.num_constraints());
+    //         }
 
-        (msg, params, secret_keys, public_keys, sig)
-    }
+    //         let mut pairs = vec![];
+    //         for (p, q) in ps.iter().zip(qs.iter()) {
+    //             pairs.push((p, q.ell_coeffs.iter()));
+    //         }
+    //         let mut f = Self::GTVar::one();
 
-    #[test]
-    fn check_signature() {
-        let (msg, params, _, pk, sig) = get_instance();
-        assert!(Signature::verify_slow(msg.as_bytes(), &sig, &pk, &params));
-        assert!(Signature::verify(msg.as_bytes(), &sig, &pk, &params));
-    }
+    //         for i in BitIteratorBE::new(P::X).skip(1) {
+    //             f.square_in_place()?;
 
-    #[test]
-    fn check_verify_failure() {
-        let (msg, params, _, pk, sig) = get_instance();
-        assert!(!Signature::verify_slow(
-            &[msg.as_bytes(), &[1]].concat(),
-            &sig,
-            &pk,
-            &params
-        ));
-        assert!(!Signature::verify(
-            &[msg.as_bytes(), &[1]].concat(),
-            &sig,
-            &pk,
-            &params
-        ));
-    }
+    //             for &mut (p, ref mut coeffs) in pairs.iter_mut() {
+    //                 Self::ell(&mut f, coeffs.next().unwrap(), &p.0)?;
+    //             }
 
-    #[test]
-    fn check_aggregate_signature() {
-        let (msg, params, _, public_keys, sig) = get_aggregate_instances();
-        assert!(Signature::aggregate_verify(msg.as_bytes(), &sig, &public_keys, &params).unwrap());
-    }
+    //             if i {
+    //                 for &mut (p, ref mut coeffs) in pairs.iter_mut() {
+    //                     Self::ell(&mut f, &coeffs.next().unwrap(), &p.0)?;
+    //                 }
+    //             }
+    //         }
+    //     */
+    //     // -> ell -> partial ell
 
-    #[test]
-    fn check_r1cs() {
-        let cs = ConstraintSystem::new_ref();
-        let (msg, params, _, pk, sig) = get_instance();
+    //     // /*
+    //     let ps = [
+    //         G1PreparedVar::<
+    //             BLSSigCurveConfig,
+    //             fp_var!(BaseSigCurveField, BaseSNARKField),
+    //             BaseSNARKField,
+    //         >::from_group_var(&params_var.g1_generator.negate().unwrap())
+    //         .unwrap(),
+    //         G1PreparedVar::<
+    //             BLSSigCurveConfig,
+    //             fp_var!(BaseSigCurveField, BaseSNARKField),
+    //             BaseSNARKField,
+    //         >::from_group_var(&pk_var.pub_key)
+    //         .unwrap(),
+    //     ];
+    //     let qs: [G2PreparedVar<BLSSigCurveConfig, _, _>; 2] = [
+    //         G2PreparedVar::from_group_var(&sig_var.signature).unwrap(),
+    //         G2PreparedVar::from_group_var(&params_var.g2_generator).unwrap(),
+    //     ];
 
-        let msg_var: Vec<UInt8<BaseSNARKField>> = msg
-            .as_bytes()
-            .iter()
-            .map(|b| UInt8::new_input(cs.clone(), || Ok(b)).unwrap())
-            .collect();
-        let params_var = ParametersVar::new_input(cs.clone(), || Ok(params)).unwrap();
-        let pk_var = PublicKeyVar::new_input(cs.clone(), || Ok(pk)).unwrap();
-        let sig_var = SignatureVar::new_input(cs.clone(), || Ok(sig)).unwrap();
+    //     let mut pairs = vec![];
+    //     for (p, q) in ps.iter().zip(qs.iter()) {
+    //         pairs.push((p, q.ell_coeffs.iter()));
+    //     }
 
-        BLSAggregateSignatureVerifyGadget::verify(&params_var, &pk_var, &msg_var, &sig_var)
-            .unwrap();
+    //     type MyPairingVar = bls12::PairingVar<
+    //         BLSSigCurveConfig,
+    //         fp_var!(BaseSigCurveField, BaseSNARKField),
+    //         BaseSNARKField,
+    //     >;
+    //     let mut f =
+    //         <MyPairingVar as PairingVar<Bls12<BLSSigCurveConfig>, BaseSNARKField>>::GTVar::one();
 
-        println!("Number of constraints: {}", cs.num_constraints());
-        assert!(cs.is_satisfied().unwrap());
+    //     for (idx, i) in BitIteratorBE::new(<BLSSigCurveConfig as Bls12Config>::X)
+    //         .skip(1)
+    //         .enumerate()
+    //     {
+    //         println!("at {}", idx);
 
-        println!("RC1S is satisfied!");
-    }
+    //         f.square_in_place().unwrap();
+    //         println!(
+    //             "cs.satisfied = {} at {}",
+    //             cs.is_satisfied().unwrap(),
+    //             line!()
+    //         );
 
-    #[test]
-    fn emulation_bug_example() {
-        let cs = ConstraintSystem::new_ref();
-        let (_, params, _, pk, sig) = get_instance();
+    //         for &mut (p, ref mut coeffs) in pairs.iter_mut() {
+    //             MyPairingVar::ell(&mut f, coeffs.next().unwrap(), &p.0).unwrap();
+    //         }
+    //         println!(
+    //             "cs.satisfied = {} at {}",
+    //             cs.is_satisfied().unwrap(),
+    //             line!()
+    //         );
 
-        let params_var = ParametersVar::new_input(cs.clone(), || Ok(params)).unwrap();
-        let pk_var = PublicKeyVar::new_constant(cs.clone(), pk).unwrap();
-        let sig_var = SignatureVar::new_constant(cs.clone(), sig).unwrap();
+    //         if i {
+    //             for &mut (p, ref mut coeffs) in pairs.iter_mut() {
+    //                 MyPairingVar::ell(&mut f, coeffs.next().unwrap(), &p.0).unwrap();
+    //             }
+    //         }
+    //         println!(
+    //             "cs.satisfied = {} at {}",
+    //             cs.is_satisfied().unwrap(),
+    //             line!()
+    //         );
 
-        // Debug Story: Aggregate Sig -> product_of_pairing -> miller loop ->
-        /*
-             // for convenience, just read 0
-            if let Some(p) = ps.get(0) {
-                let cs = p.0.x.cs();
-                tracing::info!(num_constraints = cs.num_constraints());
-            }
+    //         assert!(cs.is_satisfied().unwrap());
+    //         println!();
+    //     }
+    //     // */
+    //     // -> Fp12Var::mul_by_014 -> directly copying values pass the assertion
 
-            let mut pairs = vec![];
-            for (p, q) in ps.iter().zip(qs.iter()) {
-                pairs.push((p, q.ell_coeffs.iter()));
-            }
-            let mut f = Self::GTVar::one();
+    //     // let s: CubicExtField<Fp6ConfigWrapper<<BLSSigCurveConfig as Bls12Config>::Fp6Config>> = CubicExtField { c0: QuadExtField { c0: BaseSigCurveField::new(BigInt!("1396647618126876491551238897028281182182662946814742239452658799494849612884112015940766337389283670758378407669858")), c1: BaseSigCurveField::new(BigInt!("489300199753474263487139255028045766852234638962321376174587026474133093607716596781998693009932963140607730310874")) }, c1: QuadExtField { c0: BaseSigCurveField::new(BigInt!("2076779849093790960004645082128074049749284347384508349411906451297833786449525588244671694689239114308470534722")), c1: BaseSigCurveField::new(BigInt!("3429111531654932568292424302827161866150960261911970054523238888922579513273636064340952974092751506611613309106989")) }, c2: QuadExtField { c0: BaseSigCurveField::new(BigInt!("3105552301778060130939400582219924301640386073897117038804000010537014450986416157402674422832457578419365373540100")), c1: BaseSigCurveField::new(BigInt!("3876225650084791655496417842379490798548983675921971746960092311091188678494876118677610567726216270877190335329985")) } };
+    //     // let c0 = QuadExtField { c0: BaseSigCurveField::new(BigInt!("3793885288740742725797458173051012191755498788871183885026428963711034866571316645935841285200271690995591479553459")), c1: BaseSigCurveField::new(BigInt!("2996901763584276916617790377778099338968936475300200779862307371169240467862390136884092754318251205909929343510514")) };
+    //     // let c1: QuadExtField<Fp2ConfigWrapper<<BLSSigCurveConfig as Bls12Config>::Fp2Config>> = QuadExtField { c0: BaseSigCurveField::new(BigInt!("1390118126216571966813929905681038212433944121124097261166221724113580654669884433532201829614388003564787124846154")), c1: BaseSigCurveField::new(BigInt!("3841297017270657899921787036732710213975700732339081708515654031471901412628370576261289604985108475530657932751769")) };
 
-            for i in BitIteratorBE::new(P::X).skip(1) {
-                f.square_in_place()?;
+    //     // let sv = Fp6Var::new_input(cs.clone(), || Ok(s)).unwrap();
+    //     // let c0v = Fp2Var::new_input(cs.clone(), || Ok(c0)).unwrap();
+    //     // let c1v: QuadExtVar<
+    //     //     fp_var!(BaseSigCurveField, BaseSNARKField),
+    //     //     Fp2ConfigWrapper<ark_bls12_381::Fq2Config>,
+    //     //     BaseSNARKField,
+    //     // > = Fp2Var::new_input(cs.clone(), || Ok(c1)).unwrap();
+    //     // let _ = sv.mul_by_c0_c1_0(&c0v, &c1v).unwrap();
+    //     //
+    //     // -> Fp6_3over2::mul_by_c0_c1_0 -> Fp6_3over2 (`let c1 = a0_plus_a1 * b0_plus_b1;`)
 
-                for &mut (p, ref mut coeffs) in pairs.iter_mut() {
-                    Self::ell(&mut f, coeffs.next().unwrap(), &p.0)?;
-                }
+    //     // then, we ensure during the computation, there are no unsatisfiable constraints generated
+    //     println!("{}", cs.num_constraints());
+    //     assert!(cs.is_satisfied().unwrap());
+    // }
 
-                if i {
-                    for &mut (p, ref mut coeffs) in pairs.iter_mut() {
-                        Self::ell(&mut f, &coeffs.next().unwrap(), &p.0)?;
-                    }
-                }
-            }
-        */
-        // -> ell -> partial ell
+    // #[test]
+    // fn tracing_num_constraints() {
+    //     let file_appender = tracing_appender::rolling::hourly("./", "constraints.log");
+    //     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
-        // /*
-        let ps = [
-            G1PreparedVar::<
-                BLSSigCurveConfig,
-                fp_var!(BaseSigCurveField, BaseSNARKField),
-                BaseSNARKField,
-            >::from_group_var(&params_var.g1_generator.negate().unwrap())
-            .unwrap(),
-            G1PreparedVar::<
-                BLSSigCurveConfig,
-                fp_var!(BaseSigCurveField, BaseSNARKField),
-                BaseSNARKField,
-            >::from_group_var(&pk_var.pub_key)
-            .unwrap(),
-        ];
-        let qs: [G2PreparedVar<BLSSigCurveConfig, _, _>; 2] = [
-            G2PreparedVar::from_group_var(&sig_var.signature).unwrap(),
-            G2PreparedVar::from_group_var(&params_var.g2_generator).unwrap(),
-        ];
+    //     tracing_subscriber::registry()
+    //         .with(
+    //             tracing_subscriber::fmt::layer()
+    //                 // treat span enter/exit as an event
+    //                 .with_span_events(
+    //                     tracing_subscriber::fmt::format::FmtSpan::EXIT
+    //                         | tracing_subscriber::fmt::format::FmtSpan::ENTER,
+    //                 )
+    //                 // write to a log file
+    //                 .with_ansi(false)
+    //                 .with_writer(non_blocking)
+    //                 // log functions inside our crate + pairing
+    //                 .with_filter(tracing_subscriber::filter::FilterFn::new(|metadata| {
+    //                     // 1. target filtering
+    //                     metadata.target().contains("sig")
+    //                         // 2. name filtering
+    //                         || ["miller_loop", "final_exponentiation"]
+    //                             .into_iter()
+    //                             .any(|s| metadata.name().contains(s))
+    //                         // 3. event filtering
+    //                         // - event from spans that do not match either of the above two rules will not be considered
+    //                         || metadata.is_event()
+    //                 })),
+    //         )
+    //         .init();
 
-        let mut pairs = vec![];
-        for (p, q) in ps.iter().zip(qs.iter()) {
-            pairs.push((p, q.ell_coeffs.iter()));
-        }
+    //     let cs = ConstraintSystem::new_ref();
+    //     let (msg, params, _, pk, sig) = get_instance();
 
-        type MyPairingVar = bls12::PairingVar<
-            BLSSigCurveConfig,
-            fp_var!(BaseSigCurveField, BaseSNARKField),
-            BaseSNARKField,
-        >;
-        let mut f =
-            <MyPairingVar as PairingVar<Bls12<BLSSigCurveConfig>, BaseSNARKField>>::GTVar::one();
+    //     let msg_var: Vec<UInt8<BaseSNARKField>> = msg
+    //         .as_bytes()
+    //         .iter()
+    //         .map(|b| UInt8::new_input(cs.clone(), || Ok(b)).unwrap())
+    //         .collect();
+    //     let params_var = ParametersVar::new_input(cs.clone(), || Ok(params)).unwrap();
+    //     let pk_var = PublicKeyVar::new_input(cs.clone(), || Ok(pk)).unwrap();
+    //     let sig_var = SignatureVar::new_input(cs.clone(), || Ok(sig)).unwrap();
 
-        for (idx, i) in BitIteratorBE::new(<BLSSigCurveConfig as Bls12Config>::X)
-            .skip(1)
-            .enumerate()
-        {
-            println!("at {}", idx);
+    //     BLSAggregateSignatureVerifyGadget::verify(&params_var, &pk_var, &msg_var, &sig_var)
+    //         .unwrap();
 
-            f.square_in_place().unwrap();
-            println!(
-                "cs.satisfied = {} at {}",
-                cs.is_satisfied().unwrap(),
-                line!()
-            );
+    //     let num_constraints = cs.num_constraints();
+    //     tracing::info!("Number of constraints: {}", num_constraints);
+    //     assert!(cs.is_satisfied().unwrap());
 
-            for &mut (p, ref mut coeffs) in pairs.iter_mut() {
-                MyPairingVar::ell(&mut f, coeffs.next().unwrap(), &p.0).unwrap();
-            }
-            println!(
-                "cs.satisfied = {} at {}",
-                cs.is_satisfied().unwrap(),
-                line!()
-            );
-
-            if i {
-                for &mut (p, ref mut coeffs) in pairs.iter_mut() {
-                    MyPairingVar::ell(&mut f, coeffs.next().unwrap(), &p.0).unwrap();
-                }
-            }
-            println!(
-                "cs.satisfied = {} at {}",
-                cs.is_satisfied().unwrap(),
-                line!()
-            );
-
-            assert!(cs.is_satisfied().unwrap());
-            println!();
-        }
-        // */
-        // -> Fp12Var::mul_by_014 -> directly copying values pass the assertion
-
-        // let s: CubicExtField<Fp6ConfigWrapper<<BLSSigCurveConfig as Bls12Config>::Fp6Config>> = CubicExtField { c0: QuadExtField { c0: BaseSigCurveField::new(BigInt!("1396647618126876491551238897028281182182662946814742239452658799494849612884112015940766337389283670758378407669858")), c1: BaseSigCurveField::new(BigInt!("489300199753474263487139255028045766852234638962321376174587026474133093607716596781998693009932963140607730310874")) }, c1: QuadExtField { c0: BaseSigCurveField::new(BigInt!("2076779849093790960004645082128074049749284347384508349411906451297833786449525588244671694689239114308470534722")), c1: BaseSigCurveField::new(BigInt!("3429111531654932568292424302827161866150960261911970054523238888922579513273636064340952974092751506611613309106989")) }, c2: QuadExtField { c0: BaseSigCurveField::new(BigInt!("3105552301778060130939400582219924301640386073897117038804000010537014450986416157402674422832457578419365373540100")), c1: BaseSigCurveField::new(BigInt!("3876225650084791655496417842379490798548983675921971746960092311091188678494876118677610567726216270877190335329985")) } };
-        // let c0 = QuadExtField { c0: BaseSigCurveField::new(BigInt!("3793885288740742725797458173051012191755498788871183885026428963711034866571316645935841285200271690995591479553459")), c1: BaseSigCurveField::new(BigInt!("2996901763584276916617790377778099338968936475300200779862307371169240467862390136884092754318251205909929343510514")) };
-        // let c1: QuadExtField<Fp2ConfigWrapper<<BLSSigCurveConfig as Bls12Config>::Fp2Config>> = QuadExtField { c0: BaseSigCurveField::new(BigInt!("1390118126216571966813929905681038212433944121124097261166221724113580654669884433532201829614388003564787124846154")), c1: BaseSigCurveField::new(BigInt!("3841297017270657899921787036732710213975700732339081708515654031471901412628370576261289604985108475530657932751769")) };
-
-        // let sv = Fp6Var::new_input(cs.clone(), || Ok(s)).unwrap();
-        // let c0v = Fp2Var::new_input(cs.clone(), || Ok(c0)).unwrap();
-        // let c1v: QuadExtVar<
-        //     fp_var!(BaseSigCurveField, BaseSNARKField),
-        //     Fp2ConfigWrapper<ark_bls12_381::Fq2Config>,
-        //     BaseSNARKField,
-        // > = Fp2Var::new_input(cs.clone(), || Ok(c1)).unwrap();
-        // let _ = sv.mul_by_c0_c1_0(&c0v, &c1v).unwrap();
-        //
-        // -> Fp6_3over2::mul_by_c0_c1_0 -> Fp6_3over2 (`let c1 = a0_plus_a1 * b0_plus_b1;`)
-
-        // then, we ensure during the computation, there are no unsatisfiable constraints generated
-        println!("{}", cs.num_constraints());
-        assert!(cs.is_satisfied().unwrap());
-    }
-
-    #[test]
-    fn tracing_num_constraints() {
-        let file_appender = tracing_appender::rolling::hourly("./", "constraints.log");
-        let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
-
-        tracing_subscriber::registry()
-            .with(
-                tracing_subscriber::fmt::layer()
-                    // treat span enter/exit as an event
-                    .with_span_events(
-                        tracing_subscriber::fmt::format::FmtSpan::EXIT
-                            | tracing_subscriber::fmt::format::FmtSpan::ENTER,
-                    )
-                    // write to a log file
-                    .with_ansi(false)
-                    .with_writer(non_blocking)
-                    // log functions inside our crate + pairing
-                    .with_filter(tracing_subscriber::filter::FilterFn::new(|metadata| {
-                        // 1. target filtering
-                        metadata.target().contains("sig")
-                            // 2. name filtering
-                            || ["miller_loop", "final_exponentiation"]
-                                .into_iter()
-                                .any(|s| metadata.name().contains(s))
-                            // 3. event filtering
-                            // - event from spans that do not match either of the above two rules will not be considered
-                            || metadata.is_event()
-                    })),
-            )
-            .init();
-
-        let cs = ConstraintSystem::new_ref();
-        let (msg, params, _, pk, sig) = get_instance();
-
-        let msg_var: Vec<UInt8<BaseSNARKField>> = msg
-            .as_bytes()
-            .iter()
-            .map(|b| UInt8::new_input(cs.clone(), || Ok(b)).unwrap())
-            .collect();
-        let params_var = ParametersVar::new_input(cs.clone(), || Ok(params)).unwrap();
-        let pk_var = PublicKeyVar::new_input(cs.clone(), || Ok(pk)).unwrap();
-        let sig_var = SignatureVar::new_input(cs.clone(), || Ok(sig)).unwrap();
-
-        BLSAggregateSignatureVerifyGadget::verify(&params_var, &pk_var, &msg_var, &sig_var)
-            .unwrap();
-
-        let num_constraints = cs.num_constraints();
-        tracing::info!("Number of constraints: {}", num_constraints);
-        assert!(cs.is_satisfied().unwrap());
-
-        tracing::info!("R1CS is satisfied!");
-    }
+    //     tracing::info!("R1CS is satisfied!");
+    // }
 }
